@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Taiyou06 <kaandindar21@gmail.com>
+Date: Tue, 1 Apr 2025 10:40:48 +0200
+Subject: [PATCH] C2ME: Optimise computeFluidType
+
+
+diff --git a/net/minecraft/world/level/levelgen/Aquifer.java b/net/minecraft/world/level/levelgen/Aquifer.java
+index c62a15ea4a1bb22e7bcc2fc544acf8a601892029..fdeecff2c3f481c5d2f33439fe6700392d538858 100644
+--- a/net/minecraft/world/level/levelgen/Aquifer.java
++++ b/net/minecraft/world/level/levelgen/Aquifer.java
+@@ -453,12 +453,10 @@ public interface Aquifer {
+         private BlockState computeFluidType(int x, int y, int z, Aquifer.FluidStatus fluidStatus, int surfaceLevel) {
+             BlockState blockState = fluidStatus.fluidType;
+             if (surfaceLevel <= -10 && surfaceLevel != DimensionType.WAY_BELOW_MIN_Y && fluidStatus.fluidType != Blocks.LAVA.defaultBlockState()) {
+-                int i = 64;
+-                int i1 = 40;
+-                int i2 = Math.floorDiv(x, 64);
+-                int i3 = Math.floorDiv(y, 40);
+-                int i4 = Math.floorDiv(z, 64);
+-                double d = this.lavaNoise.compute(new DensityFunction.SinglePointContext(i2, i3, i4));
++                int k = x >> 6; // floorDiv(x, 64)
++                int l = Math.floorDiv(y, 40);
++                int m = z >> 6; // floorDiv(z, 64)
++                double d = this.lavaNoise.compute(new DensityFunction.SinglePointContext(k, l, m));
+                 if (Math.abs(d) > 0.3) {
+                     blockState = Blocks.LAVA.defaultBlockState();
+                 }

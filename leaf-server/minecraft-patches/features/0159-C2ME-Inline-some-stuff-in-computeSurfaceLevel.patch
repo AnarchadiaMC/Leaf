@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Taiyou06 <kaandindar21@gmail.com>
+Date: Tue, 1 Apr 2025 11:11:33 +0200
+Subject: [PATCH] C2ME: Inline some stuff in computeSurfaceLevel
+
+
+diff --git a/net/minecraft/world/level/levelgen/Aquifer.java b/net/minecraft/world/level/levelgen/Aquifer.java
+index fdeecff2c3f481c5d2f33439fe6700392d538858..e0abf5586c0d6d55687559e8e720f052781fbef1 100644
+--- a/net/minecraft/world/level/levelgen/Aquifer.java
++++ b/net/minecraft/world/level/levelgen/Aquifer.java
+@@ -415,13 +415,10 @@ public interface Aquifer {
+                 d1 = -1.0;
+             } else {
+                 int i = maxSurfaceLevel + 8 - y;
+-                int i1 = 64;
+                 double d2 = fluidPresent ? Mth.clampedMap((double)i, 0.0, 64.0, 1.0, 0.0) : 0.0;
+                 double d3 = Mth.clamp(this.fluidLevelFloodednessNoise.compute(singlePointContext), -1.0, 1.0);
+-                double d4 = Mth.map(d2, 1.0, 0.0, -0.3, 0.8);
+-                double d5 = Mth.map(d2, 1.0, 0.0, -0.8, 0.4);
+-                d = d3 - d5;
+-                d1 = d3 - d4;
++                d = d3 + 0.4 + (d2 - 1.0) * 1.1; // inlined calculation
++                d1 = d3 + 0.8 + (d2 - 1.0) * 1.2; // inlined calculation
+             }
+ 
+             int i;
