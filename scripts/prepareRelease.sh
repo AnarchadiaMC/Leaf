@@ -3,11 +3,14 @@ set -e
 
 IS_EOL=false
 IS_UNSUPPORTED=false
+IS_DEV=false
 
+JAR_NAME="leaf-1.21.4"
+CURRENT_TAG="ver-1.21.4"
 RELEASE_NOTES="release_notes.md"
 
 # Rename Leaf jar
-mv ./leaf-1.21.4-"${BUILD_NUMBER}"-mojmap.jar ./leaf-1.21.4-"${BUILD_NUMBER}".jar
+mv ./$JAR_NAME-${BUILD_NUMBER}-mojmap.jar ./$JAR_NAME-${BUILD_NUMBER}.jar
 
 # Branch name
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -15,7 +18,7 @@ echo "✨Current branch: $CURRENT_BRANCH"
 
 # Latest tag name
 LATEST_TAG=$(git describe --tags --abbrev=0)
-if [ -z "$LATEST_TAG" ]; then
+if [ -z $LATEST_TAG ]; then
   LATEST_TAG=$(git rev-list --max-parents=0 HEAD)
   echo "⚠️No previous release found. Using initial commit."
 else
@@ -23,12 +26,12 @@ else
 fi
 
 # Commit of the latest tag
-LAST_RELEASE_COMMIT=$(git rev-list -n 1 "$LATEST_TAG")
+LAST_RELEASE_COMMIT=$(git rev-list -n 1 $LATEST_TAG)
 echo "✨Last release commit: $LAST_RELEASE_COMMIT"
 
 # Commits log
-COMMIT_LOG=$(git log "$LAST_RELEASE_COMMIT"..HEAD --pretty=format:"- [\`%h\`](https://github.com/"${GITHUB_REPO}"/commit/%H) %s (%an)")
-if [ -z "$COMMIT_LOG" ]; then
+COMMIT_LOG=$(git log $LAST_RELEASE_COMMIT..HEAD --pretty=format:"- [\`%h\`](https://github.com/${GITHUB_REPO}/commit/%H) %s (%an)")
+if [ -z $COMMIT_LOG ]; then
   COMMIT_LOG="⚠️No new commits since $LATEST_TAG."
 else
   echo "✅Commits log generated"
@@ -47,11 +50,11 @@ echo "" >> $RELEASE_NOTES
 } >> $RELEASE_NOTES
 
 # Get checksums
-file="./leaf-1.21.4-"${BUILD_NUMBER}".jar"
-if [ -f "$file" ]; then
-  MD5=$(md5sum "$file" | awk '{ print $1 }')
-  SHA256=$(sha256sum "$file" | awk '{ print $1 }')
-  FILENAME=$(basename "$file")
+file="./$JAR_NAME-${BUILD_NUMBER}.jar"
+if [ -f $file ]; then
+  MD5=$(md5sum $file | awk '{ print $1 }')
+  SHA256=$(sha256sum $file | awk '{ print $1 }')
+  FILENAME=$(basename $file)
 
   {
     echo "|           | $FILENAME |"
@@ -68,7 +71,7 @@ else
 fi
 
 # EOL warning
-if [ "$IS_EOL" = true ]; then
+if [ $IS_EOL = true ]; then
   {
     echo ""
     echo "> [!WARNING]"
@@ -78,7 +81,7 @@ if [ "$IS_EOL" = true ]; then
 fi
 
 # Unsupported warning
-if [ "$IS_UNSUPPORTED" = true ]; then
+if [ $IS_UNSUPPORTED = true ]; then
   {
     echo ""
     echo "> [!CAUTION]"
@@ -87,6 +90,20 @@ if [ "$IS_UNSUPPORTED" = true ]; then
   } >> $RELEASE_NOTES
 fi
 
-# Delete last tag
-gh release delete ver-1.21.4 --cleanup-tag -y -R "${GITHUB_REPO}"
+# Dev build warning
+if [ $IS_DEV = true ]; then
+  {
+    echo ""
+    echo "> [!WARNING]"
+    echo "> This is the early dev build, only for testing usage."
+    echo "> Do not use in the production environment!"
+  } >> $RELEASE_NOTES
+fi
+
+# Delete current release tag
+if git show-ref --tags $CURRENT_TAG --quiet; then
+  {
+    gh release delete $CURRENT_TAG --cleanup-tag -y -R "${GITHUB_REPO}"
+  }
+fi
 echo "🚀Ready for release"
