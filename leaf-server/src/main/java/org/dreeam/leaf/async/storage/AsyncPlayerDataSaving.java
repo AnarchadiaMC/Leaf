@@ -199,16 +199,18 @@ public class AsyncPlayerDataSaving {
     public static void safeReplaceBackup(Path current, Path backup, byte[] bytes, int offset, int length) {
         File latest = writeTempFile(current, bytes, offset, length);
         Objects.requireNonNull(latest);
-        for (int i = 1; i <= 10; i++) {
-            try {
+        if (current.toFile().isFile()) {
+            for (int i = 1; i <= 10; i++) {
                 try {
-                    Files.move(current, backup, ATOMIC_MOVE);
-                } catch (AtomicMoveNotSupportedException e) {
-                    Files.move(current, backup, NO_ATOMIC_MOVE);
+                    try {
+                        Files.move(current, backup, ATOMIC_MOVE);
+                    } catch (AtomicMoveNotSupportedException e) {
+                        Files.move(current, backup, NO_ATOMIC_MOVE);
+                    }
+                    break;
+                } catch (IOException e) {
+                    LOGGER.error("Failed move {} to {} retries ({} / 10)", current, backup, i, e);
                 }
-                break;
-            } catch (IOException e) {
-                LOGGER.error("Failed move {} to {} retries ({} / 10)", current, backup, i, e);
             }
         }
         for (int i = 1; i <= 10; i++) {
