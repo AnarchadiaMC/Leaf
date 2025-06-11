@@ -3,13 +3,14 @@ package org.dreeam.leaf.util;
 import net.minecraft.world.entity.Entity;
 
 import java.lang.reflect.Array; // Required for Array.newInstance
+import java.util.Arrays;
 import java.util.List;
 
 public class FastBitRadixSort {
 
     private static final int SMALL_ARRAY_THRESHOLD = 2;
-    private Entity[] entityBuffer = new Entity[0];
-    private long[] bitsBuffer = new long[0];
+    private static final ThreadLocal<Entity[]> ENTITY_BUFFER = ThreadLocal.withInitial(() -> new Entity[256]);
+    private static final ThreadLocal<long[]> BITS_BUFFER = ThreadLocal.withInitial(() -> new long[256]);
 
     @SuppressWarnings("unchecked")
     public <T extends Entity, T_REF extends Entity> T[] sort(List<T> entities, T_REF referenceEntity, Class<T> entityClass) {
@@ -19,23 +20,27 @@ public class FastBitRadixSort {
             return entities.toArray(resultArray);
         }
 
-        if (this.entityBuffer.length < size) {
-            this.entityBuffer = new Entity[size];
-            this.bitsBuffer = new long[size];
+        if (ENTITY_BUFFER.get().length < size) {
+            ENTITY_BUFFER.set(new Entity[size]);
+            BITS_BUFFER.set(new long[size]);
         }
+
+        var entitiesBuf = ENTITY_BUFFER.get();
+        var bitsBuf = BITS_BUFFER.get();
         for (int i = 0; i < size; i++) {
-            this.entityBuffer[i] = entities.get(i);
-            this.bitsBuffer[i] = Double.doubleToRawLongBits(
+            entitiesBuf[i] = entities.get(i);
+            bitsBuf[i] = Double.doubleToRawLongBits(
                 referenceEntity.distanceToSqr(entities.get(i))
             );
         }
 
-        fastRadixSort(this.entityBuffer, this.bitsBuffer, 0, size - 1, 62);
+        fastRadixSort(entitiesBuf, bitsBuf, 0, size - 1, 62);
 
         T[] resultArray = (T[]) Array.newInstance(entityClass, size);
         for (int i = 0; i < size; i++) {
-            resultArray[i] = entityClass.cast(this.entityBuffer[i]);
+            resultArray[i] = entityClass.cast(entitiesBuf[i]);
         }
+        Arrays.fill(entitiesBuf, 0, size, null);
         return resultArray;
     }
 
