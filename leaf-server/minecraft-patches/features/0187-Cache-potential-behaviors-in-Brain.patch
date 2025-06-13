@@ -5,7 +5,7 @@ Subject: [PATCH] Cache potential behaviors in Brain
 
 
 diff --git a/net/minecraft/world/entity/ai/Brain.java b/net/minecraft/world/entity/ai/Brain.java
-index b143cd6d5636dc61458a864cd548c886d14cd30c..954aa416877fd8838fd88d84096918455baa5641 100644
+index 636a945ce2a91b8bf73b790e0e9e412368b3fe71..1063cea5a79343c49c29dc4022ac75f4c762804f 100644
 --- a/net/minecraft/world/entity/ai/Brain.java
 +++ b/net/minecraft/world/entity/ai/Brain.java
 @@ -60,6 +60,7 @@ public class Brain<E extends LivingEntity> {
@@ -24,7 +24,15 @@ index b143cd6d5636dc61458a864cd548c886d14cd30c..954aa416877fd8838fd88d8409691845
      }
  
      public <T> DataResult<T> serializeStart(DynamicOps<T> ops) {
-@@ -314,6 +316,7 @@ public class Brain<E extends LivingEntity> {
+@@ -182,6 +184,7 @@ public class Brain<E extends LivingEntity> {
+ 
+     public void clearMemories() {
+         this.memories.keySet().forEach(memoryModuleType -> this.memories.put((MemoryModuleType<?>)memoryModuleType, Optional.empty()));
++        invalidateBehaviorCache(); // Leaf - Cache potential behaviors in Brain
+     }
+ 
+     public <U> void eraseMemory(MemoryModuleType<U> type) {
+@@ -314,6 +317,7 @@ public class Brain<E extends LivingEntity> {
              this.activeActivities.clear();
              this.activeActivities.addAll(this.coreActivities);
              this.activeActivities.add(activity);
@@ -32,7 +40,7 @@ index b143cd6d5636dc61458a864cd548c886d14cd30c..954aa416877fd8838fd88d8409691845
          }
      }
  
-@@ -394,11 +397,13 @@ public class Brain<E extends LivingEntity> {
+@@ -394,11 +398,13 @@ public class Brain<E extends LivingEntity> {
                  .computeIfAbsent(activity, activity1 -> new it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet<>()) // Leaf - Replace brain activity maps with optimized collection
                  .add((BehaviorControl<? super E>)pair.getSecond());
          }
@@ -46,7 +54,7 @@ index b143cd6d5636dc61458a864cd548c886d14cd30c..954aa416877fd8838fd88d8409691845
      }
  
      public boolean isActive(Activity activity) {
-@@ -452,23 +457,44 @@ public class Brain<E extends LivingEntity> {
+@@ -452,23 +458,44 @@ public class Brain<E extends LivingEntity> {
          }
      }
  
