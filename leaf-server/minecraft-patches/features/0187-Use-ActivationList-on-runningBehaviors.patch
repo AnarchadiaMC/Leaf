@@ -5,7 +5,7 @@ Subject: [PATCH] Use ActivationList on runningBehaviors
 
 
 diff --git a/net/minecraft/world/entity/ai/Brain.java b/net/minecraft/world/entity/ai/Brain.java
-index 1063cea5a79343c49c29dc4022ac75f4c762804f..ce924645a581821f5a8d404b0d6328aa6cf9fc77 100644
+index 27fc18000987d6f962df8a9e441eb2e3d28bf213..205d7f583ad9415bd2411c3b13726c6e7d90ff83 100644
 --- a/net/minecraft/world/entity/ai/Brain.java
 +++ b/net/minecraft/world/entity/ai/Brain.java
 @@ -61,6 +61,7 @@ public class Brain<E extends LivingEntity> {
@@ -16,7 +16,7 @@ index 1063cea5a79343c49c29dc4022ac75f4c762804f..ce924645a581821f5a8d404b0d6328aa
      public static <E extends LivingEntity> Brain.Provider<E> provider(
          Collection<? extends MemoryModuleType<?>> memoryTypes, Collection<? extends SensorType<? extends Sensor<? super E>>> sensorTypes
      ) {
-@@ -274,19 +275,7 @@ public class Brain<E extends LivingEntity> {
+@@ -273,19 +274,7 @@ public class Brain<E extends LivingEntity> {
      @Deprecated
      @VisibleForDebug
      public List<BehaviorControl<? super E>> getRunningBehaviors() {
@@ -37,7 +37,7 @@ index 1063cea5a79343c49c29dc4022ac75f4c762804f..ce924645a581821f5a8d404b0d6328aa
      }
  
      public void useDefaultActivity() {
-@@ -454,6 +443,7 @@ public class Brain<E extends LivingEntity> {
+@@ -453,6 +442,7 @@ public class Brain<E extends LivingEntity> {
          long gameTime = owner.level().getGameTime();
  
          for (BehaviorControl<? super E> behaviorControl : this.getRunningBehaviors()) {
@@ -45,7 +45,7 @@ index 1063cea5a79343c49c29dc4022ac75f4c762804f..ce924645a581821f5a8d404b0d6328aa
              behaviorControl.doStop(level, owner, gameTime);
          }
      }
-@@ -461,6 +451,7 @@ public class Brain<E extends LivingEntity> {
+@@ -460,6 +450,7 @@ public class Brain<E extends LivingEntity> {
      // Leaf start - Cache potential behaviors in Brain
      private void invalidateBehaviorCache() {
          this.cachedPotentialBehaviors = null;
@@ -53,7 +53,7 @@ index 1063cea5a79343c49c29dc4022ac75f4c762804f..ce924645a581821f5a8d404b0d6328aa
      }
  
      private void rebuildBehaviorCache() {
-@@ -478,6 +469,27 @@ public class Brain<E extends LivingEntity> {
+@@ -477,6 +468,27 @@ public class Brain<E extends LivingEntity> {
          }
      }
  
@@ -81,7 +81,7 @@ index 1063cea5a79343c49c29dc4022ac75f4c762804f..ce924645a581821f5a8d404b0d6328aa
      private ObjectArrayList<BehaviorControl<? super E>> getPotentialBehaviors() {
          if (this.cachedPotentialBehaviors == null) {
              this.rebuildBehaviorCache();
-@@ -491,6 +503,9 @@ public class Brain<E extends LivingEntity> {
+@@ -490,6 +502,9 @@ public class Brain<E extends LivingEntity> {
          for (BehaviorControl<? super E> task : this.getPotentialBehaviors()) {
              if (task.getStatus() == Behavior.Status.STOPPED) {
                  task.tryStart(level, entity, startTime);
@@ -91,7 +91,7 @@ index 1063cea5a79343c49c29dc4022ac75f4c762804f..ce924645a581821f5a8d404b0d6328aa
              }
          }
      }
-@@ -501,6 +516,11 @@ public class Brain<E extends LivingEntity> {
+@@ -500,6 +515,11 @@ public class Brain<E extends LivingEntity> {
  
          for (BehaviorControl<? super E> behaviorControl : this.getRunningBehaviors()) {
              behaviorControl.tickOrStop(level, entity, gameTime);
