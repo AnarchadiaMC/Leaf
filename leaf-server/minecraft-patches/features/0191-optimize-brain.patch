@@ -1,0 +1,130 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: hayanesuru <hayanesuru@outlook.jp>
+Date: Mon, 16 Jun 2025 21:28:11 +0900
+Subject: [PATCH] optimize brain
+
+
+diff --git a/net/minecraft/world/entity/ai/Brain.java b/net/minecraft/world/entity/ai/Brain.java
+index 470cc6ad91c9b7b7973169a64580331069fa4c72..3499cf44cc4843581323fd1863786ccc6d097ad8 100644
+--- a/net/minecraft/world/entity/ai/Brain.java
++++ b/net/minecraft/world/entity/ai/Brain.java
+@@ -49,6 +49,8 @@ public class Brain<E extends LivingEntity> {
+     private final Map<MemoryModuleType<?>, Optional<? extends ExpirableValue<?>>> memories = new it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap<>();
+     private final Map<SensorType<? extends Sensor<? super E>>, Sensor<? super E>> sensors = new it.unimi.dsi.fastutil.objects.Reference2ReferenceLinkedOpenHashMap<>();
+     private final Map<Integer, Map<Activity, Set<BehaviorControl<? super E>>>> availableBehaviorsByPriority = Maps.newTreeMap();
++    public static final Map[] EMPTY_ARRAY = {};
++    private Map<Activity, Set<BehaviorControl<? super E>>>[] availableBehaviorsByPriorityArray = EMPTY_ARRAY;
+     // Leaf end - Replace brain maps with optimized collection
+     private Schedule schedule = Schedule.EMPTY;
+     // Leaf start - Replace brain maps with optimized collection
+@@ -166,6 +168,10 @@ public class Brain<E extends LivingEntity> {
+         for (Brain.MemoryValue<?> memoryValue : memoryValues) {
+             memoryValue.setMemoryInternal(this);
+         }
++
++        if (this.memories instanceof it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap<MemoryModuleType<?>, Optional<? extends ExpirableValue<?>>> map) {
++            map.trim();
++        }
+     }
+ 
+     public <T> DataResult<T> serializeStart(DynamicOps<T> ops) {
+@@ -366,7 +372,7 @@ public class Brain<E extends LivingEntity> {
+     }
+ 
+     public void addActivity(Activity activity, ImmutableList<? extends Pair<Integer, ? extends BehaviorControl<? super E>>> tasks) {
+-        this.addActivityAndRemoveMemoriesWhenStopped(activity, tasks, ImmutableSet.of(), Sets.newHashSet());
++        this.addActivityAndRemoveMemoriesWhenStopped(activity, tasks, ImmutableSet.of(), new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>());
+     }
+ 
+     public void addActivityWithConditions(
+@@ -399,6 +405,7 @@ public class Brain<E extends LivingEntity> {
+     @VisibleForTesting
+     public void removeAllBehaviors() {
+         this.availableBehaviorsByPriority.clear();
++        this.availableBehaviorsByPriorityArray = EMPTY_ARRAY;
+     }
+ 
+     public boolean isActive(Activity activity) {
+@@ -432,14 +439,28 @@ public class Brain<E extends LivingEntity> {
+     }
+ 
+     private void forgetOutdatedMemories() {
++        boolean flag = false;
++        for (var entry : this.memories.values()) {
++            if (entry.isPresent()) {
++                ExpirableValue<?> expirableValue = entry.get();
++                if (expirableValue.hasExpired()) {
++                    flag = true;
++                }
++                expirableValue.tick();
++            }
++        }
++        if (flag) {
++            eraseOutdatedMemories();
++        }
++    }
++
++    private void eraseOutdatedMemories() {
+         for (Entry<MemoryModuleType<?>, Optional<? extends ExpirableValue<?>>> entry : this.memories.entrySet()) {
+             if (entry.getValue().isPresent()) {
+-                ExpirableValue<?> expirableValue = (ExpirableValue<?>)entry.getValue().get();
++                ExpirableValue<?> expirableValue = entry.getValue().get();
+                 if (expirableValue.hasExpired()) {
+                     this.eraseMemory(entry.getKey());
+                 }
+-
+-                expirableValue.tick();
+             }
+         }
+     }
+@@ -447,15 +468,27 @@ public class Brain<E extends LivingEntity> {
+     public void stopAll(ServerLevel level, E owner) {
+         long gameTime = owner.level().getGameTime();
+ 
+-        for (BehaviorControl<? super E> behaviorControl : this.getRunningBehaviors()) {
+-            behaviorControl.doStop(level, owner, gameTime);
++        if (this.availableBehaviorsByPriorityArray.length != this.availableBehaviorsByPriority.size()) {
++            this.availableBehaviorsByPriorityArray = this.availableBehaviorsByPriority.values().toArray(EMPTY_ARRAY);
++        }
++        for (Map<Activity, Set<BehaviorControl<? super E>>> map : availableBehaviorsByPriorityArray) {
++            for (Set<BehaviorControl<? super E>> set : map.values()) {
++                for (BehaviorControl<? super E> behaviorControl : set) {
++                    if (behaviorControl.getStatus() == Behavior.Status.RUNNING) {
++                        behaviorControl.doStop(level, owner, gameTime);
++                    }
++                }
++            }
+         }
+     }
+ 
+     private void startEachNonRunningBehavior(ServerLevel level, E entity) {
+         long gameTime = level.getGameTime();
+ 
+-        for (Map<Activity, Set<BehaviorControl<? super E>>> map : this.availableBehaviorsByPriority.values()) {
++        if (this.availableBehaviorsByPriorityArray.length != this.availableBehaviorsByPriority.size()) {
++            this.availableBehaviorsByPriorityArray = this.availableBehaviorsByPriority.values().toArray(EMPTY_ARRAY);
++        }
++        for (Map<Activity, Set<BehaviorControl<? super E>>> map : availableBehaviorsByPriorityArray) {
+             for (Entry<Activity, Set<BehaviorControl<? super E>>> entry : map.entrySet()) {
+                 Activity activity = entry.getKey();
+                 if (this.activeActivities.contains(activity)) {
+@@ -472,8 +505,17 @@ public class Brain<E extends LivingEntity> {
+     private void tickEachRunningBehavior(ServerLevel level, E entity) {
+         long gameTime = level.getGameTime();
+ 
+-        for (BehaviorControl<? super E> behaviorControl : this.getRunningBehaviors()) {
+-            behaviorControl.tickOrStop(level, entity, gameTime);
++        if (this.availableBehaviorsByPriorityArray.length != this.availableBehaviorsByPriority.size()) {
++            this.availableBehaviorsByPriorityArray = this.availableBehaviorsByPriority.values().toArray(new Map[0]);
++        }
++        for (Map<Activity, Set<BehaviorControl<? super E>>> map : this.availableBehaviorsByPriorityArray) {
++            for (Set<BehaviorControl<? super E>> set : map.values()) {
++                for (BehaviorControl<? super E> behaviorControl : set) {
++                    if (behaviorControl.getStatus() == Behavior.Status.RUNNING) {
++                        behaviorControl.tickOrStop(level, entity, gameTime);
++                    }
++                }
++            }
+         }
+     }
+ 

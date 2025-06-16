@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: hayanesuru <hayanesuru@outlook.jp>
+Date: Mon, 16 Jun 2025 21:27:10 +0900
+Subject: [PATCH] Replace brain activities set collection
+
+
+diff --git a/net/minecraft/world/entity/ai/Brain.java b/net/minecraft/world/entity/ai/Brain.java
+index 636a945ce2a91b8bf73b790e0e9e412368b3fe71..470cc6ad91c9b7b7973169a64580331069fa4c72 100644
+--- a/net/minecraft/world/entity/ai/Brain.java
++++ b/net/minecraft/world/entity/ai/Brain.java
+@@ -54,8 +54,8 @@ public class Brain<E extends LivingEntity> {
+     // Leaf start - Replace brain maps with optimized collection
+     private final Map<Activity, Set<Pair<MemoryModuleType<?>, MemoryStatus>>> activityRequirements = new it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap<>();
+     private final Map<Activity, Set<MemoryModuleType<?>>> activityMemoriesToEraseWhenStopped = new it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap<>();
+-    private Set<Activity> coreActivities = new it.unimi.dsi.fastutil.objects.ObjectOpenHashSet<>();
+-    private final Set<Activity> activeActivities = new it.unimi.dsi.fastutil.objects.ObjectOpenHashSet<>();
++    private Set<Activity> coreActivities = new org.dreeam.leaf.util.map.ActivityBitSet();
++    private final Set<Activity> activeActivities = new org.dreeam.leaf.util.map.ActivityBitSet();
+     // Leaf end - Replace brain maps with optimized collection
+     private Activity defaultActivity = Activity.IDLE;
+     private long lastScheduleUpdate = -9999L;
+diff --git a/net/minecraft/world/entity/schedule/Activity.java b/net/minecraft/world/entity/schedule/Activity.java
+index 5a143bb6fabba3dc4e2272afb0be636d5722ea22..5c2615f899f210ea887d0cf54f1fa7d4835da2f4 100644
+--- a/net/minecraft/world/entity/schedule/Activity.java
++++ b/net/minecraft/world/entity/schedule/Activity.java
+@@ -32,10 +32,12 @@ public class Activity {
+     public static final Activity DIG = register("dig");
+     private final String name;
+     private final int hashCode;
++    public final int id;
+ 
+-    private Activity(String name) {
++    private Activity(String name, int id) {
+         this.name = name;
+         this.hashCode = name.hashCode();
++        this.id = id;
+     }
+ 
+     public String getName() {
+@@ -43,7 +45,7 @@ public class Activity {
+     }
+ 
+     private static Activity register(String key) {
+-        return Registry.register(BuiltInRegistries.ACTIVITY, key, new Activity(key));
++        return Registry.register(BuiltInRegistries.ACTIVITY, key, new Activity(key, BuiltInRegistries.ACTIVITY.size()));
+     }
+ 
+     @Override
